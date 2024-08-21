@@ -162,12 +162,12 @@ def compute_epipole(fundamental_mat: np.ndarray) -> np.ndarray:
     return np.linalg.svd(fundamental_mat)[-1][-1]
 
 
-# def skew(x):
-#     return np.array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
-
-
 def skew(x):
-    return np.array([[0, -x[0], x[1]], [x[0], 0, -x[2]], [-x[1], x[2], 0]])
+    return np.array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
+
+
+# def skew(x):
+#     return np.array([[0, -x[0], x[1]], [x[0], 0, -x[2]], [-x[1], x[2], 0]])
 
 
 # TODO: verify/fix this method to get projection matrices
@@ -188,22 +188,26 @@ def get_projection_matrices(
     #     pts2=pts2,
     #     seed=seed,
     # )
+    # img1 = left image
     epipole_in_img1 = compute_epipole(fundamental_mat.T)
     # P = [I | 0]
     P = np.column_stack([np.identity(3), np.zeros((3,))])
 
     # P' = [[e']_x F + e'v^T | lambda * e']
-    # v: np.ndarray = np.ones((3,)) * rng.random(size=(3,))
-    # lambda_val: float = 5e-3
-    # # epipole_in_img2 = np.append(epipole_in_img2[:2][::-1], [epipole_in_img2[-1]])
+    v: np.ndarray = np.ones((3,)) * rng.random(size=(3,))
+    lambda_val: float = 5e-3
+    # epipole_in_img2 = np.append(epipole_in_img2[:2][::-1], [epipole_in_img2[-1]])
     # P_prime = np.column_stack([
-    #     np.cross(epipole_in_img2, fundamental_mat) + epipole_in_img2 @ v.T,
-    #     lambda_val * epipole_in_img2,
+    #     np.cross(epipole_in_img1, fundamental_mat) + epipole_in_img1 @ v.T,
+    #     lambda_val * epipole_in_img1,
     # ])
-    epipole_in_img1 /= epipole_in_img1[-1]
-    epipole_in_img1 = np.append(epipole_in_img1[:2][::-1], [epipole_in_img1[-1]])
-    Te = skew(epipole_in_img1)
-    P_prime = np.vstack((np.dot(Te, fundamental_mat.T).T, epipole_in_img1)).T
+    P_prime = np.column_stack([np.cross(epipole_in_img1, fundamental_mat), epipole_in_img1])
+    # P_prime = np.column_stack([Te @ fundamental_mat, epipole_in_img1])
+
+    # epipole_in_img1 /= epipole_in_img1[-1]
+    # epipole_in_img1 = np.append(epipole_in_img1[:2][::-1], [epipole_in_img1[-1]])
+    # Te = skew(epipole_in_img1)
+    # P_prime = np.vstack((np.dot(Te, fundamental_mat.T).T, epipole_in_img1)).T
 
     return P, P_prime
 
@@ -273,26 +277,26 @@ def cameras_run(
     if len(inliers1) < matching_settings.min_n_inliers:
         return None
 
-    # P1, P2 = get_projection_matrices(
-    #     fundamental_mat=F,
-    #     img1=img1,
-    #     img2=img2,
-    #     pts1=inliers1,
-    #     pts2=inliers2,
-    # )
+    P1, P2 = get_projection_matrices(
+        fundamental_mat=F,
+        img1=img1,
+        img2=img2,
+        pts1=inliers1,
+        pts2=inliers2,
+    )
     # P1 = get_projection_matrix(fundamental_mat=F)
     # P2 = get_projection_matrix(fundamental_mat=F.T)
-    # inliers1, inliers2 = calculate_inliers_from_reprojections(
-    #     pts1=inliers1,
-    #     pts2=inliers2,
-    #     P1=P1,
-    #     P2=P2,
-    #     reprojection_distance_th=matching_settings.reprojection_distance_th,
-    # )
-    # print(f"Reprojection Inliers: {len(inliers1)} / {n_pts} \t{(len(inliers1) / n_pts) * 100:.2f}%")
-    # print("\n")
-    # if len(inliers1) < 1:
-    #     return None
+    inliers1, inliers2 = calculate_inliers_from_reprojections(
+        pts1=inliers1,
+        pts2=inliers2,
+        P1=P1,
+        P2=P2,
+        reprojection_distance_th=matching_settings.reprojection_distance_th,
+    )
+    print(f"Reprojection Inliers: {len(inliers1)} / {n_pts} \t{(len(inliers1) / n_pts) * 100:.2f}%")
+    print("\n")
+    if len(inliers1) < matching_settings.min_n_inliers:
+        return None
 
     if matching_settings.do_draw_epipolar_lines:
         if matching_settings.n_inliers_to_draw > 0 and matching_settings.n_inliers_to_draw < len(inliers1):

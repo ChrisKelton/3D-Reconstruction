@@ -1,4 +1,4 @@
-__all__ = ["show_image", "draw_epipolar_lines"]
+__all__ = ["show_image", "draw_epipolar_lines", "plot_3d_points"]
 from pathlib import Path
 from typing import Optional
 
@@ -101,4 +101,20 @@ def draw_epipolar_lines(
         plt.savefig(str(out_path))
     if show_fig:
         plt.show()
+    plt.close(fig)
+
+
+def plot_3d_points(pts3d: np.ndarray, out_path: Optional[Path] = None):
+    fig = plt.figure(figsize=(7, 7))
+    ax = fig.add_subplot(projection="3d")
+    ax.set_title("3D Reconstruction")
+    ax.plot(pts3d[0], pts3d[1], pts3d[2], 'b.')
+    ax.set_xlabel('x axis')
+    ax.set_ylabel('y axis')
+    ax.set_zlabel('z axis')
+    ax.view_init(elev=135, azim=90)
+    plt.show()
+    if out_path is not None:
+        plt.savefig(str(out_path))
+
     plt.close(fig)

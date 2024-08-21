@@ -15,7 +15,7 @@ def main():
 
     matching_settings: MatchingSettings = MatchingSettings(
         min_n_inliers=5,
-        reprojection_distance_th=500,  # pixels
+        reprojection_distance_th=25,  # pixels
         n_inliers_to_draw=-1,
     )
 
@@ -42,6 +42,11 @@ def main():
             )
             if camera is not None:
                 cameras.append(camera)
+
+        n_matched_pairs: int = len(cameras)
+        print(
+            f"Successful matches: {n_matched_pairs} / {len(matches)}    {(n_matched_pairs / len(matches)) * 100:.2f}%"
+        )
 
         save_pickle(cameras, cameras_pickle_path)
     else:

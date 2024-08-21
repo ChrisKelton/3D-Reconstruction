@@ -5,6 +5,7 @@ __all__ = [
     "calculate_inliers_from_reprojections",
 ]
 import numpy as np
+from utils import plot_3d_points
 
 
 def get_epipolar_lines(
@@ -93,6 +94,29 @@ def epipolar_geometric_check(
     return pts1, pts2
 
 
+# def triangulate_world_points(
+#     pts1: np.ndarray,
+#     pts2: np.ndarray,
+#     P1: np.ndarray,
+#     P2: np.ndarray,
+# ) -> np.ndarray:
+#     def _get_world_point(pt1: np.ndarray, pt2: np.ndarray) -> np.ndarray:
+#         A_ = np.asarray([
+#             (pt1[0] * P1[2].T) - P1[0].T,
+#             (pt1[1] * P1[2].T) - P1[1].T,
+#             (pt2[0] * P2[2].T) - P2[0].T,
+#             (pt2[1] * P2[2].T) - P2[1].T,
+#         ])
+#         U, D, V = np.linalg.svd(A_)
+#         return V[-1][:3]
+#
+#     world_points: list[np.ndarray] = []
+#     for pt1, pt2 in zip(pts1, pts2):
+#         world_points.append(_get_world_point(pt1, pt2))
+#
+#     return np.stack(world_points)
+
+
 def triangulate_world_points(
     pts1: np.ndarray,
     pts2: np.ndarray,
@@ -106,8 +130,9 @@ def triangulate_world_points(
             (pt2[0] * P2[2].T) - P2[0].T,
             (pt2[1] * P2[2].T) - P2[1].T,
         ])
-        U, D, V = np.linalg.svd(A_)
-        return V[-1][:3]
+
+        _, _, V = np.linalg.svd(A_)
+        return V[-1] / V[-1][3]
 
     world_points: list[np.ndarray] = []
     for pt1, pt2 in zip(pts1, pts2):
@@ -124,7 +149,7 @@ def calculate_inliers_from_reprojections(
     reprojection_distance_th: float = 0.5,
 ) -> tuple[np.ndarray, np.ndarray]:
     def project_world_point(world_pt: np.ndarray, P: np.ndarray) -> np.ndarray:
-        image_point = P @ np.append(world_pt, [1])
+        image_point = P @ np.append(world_pt[:3], [1])
         return image_point[:2] / image_point[-1]
 
     world_points: np.ndarray = triangulate_world_points(pts1, pts2, P1, P2)
